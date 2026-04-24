@@ -12,13 +12,10 @@ from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
-from vggt.utils.geometry import unproject_depth_map_to_point_map
 
 from aniposelib.cameras import CameraGroup, Camera
-from aniposelib.cameras import rodrigues
 import cv2
 
-from scipy.io import loadmat
 import numpy as np
 
 from tqdm import tqdm
@@ -33,6 +30,7 @@ tempdir = 'tempframes'
 root = '/groups/voigts/voigtslab/outdoor/2026_04_10_mouse_left/data'
 tracked_root = '/groups/karashchuk/karashchuklab/outdoor_analysis/2026_04_10_mouse_left'
 
+calib_fname_init = os.path.join(tracked_root, 'calibration_vggt_init.toml')
 calib_fname_out = os.path.join(tracked_root, 'calibration_adjusted.toml')
 points_fname_out = os.path.join(tracked_root, 'points_3d.npz')
 
@@ -175,6 +173,7 @@ for cname in cam_names:
 all_p2ds = np.array(all_p2ds)
 scores = np.array(scores)
 
+# handle output from new tracking pipeline
 if np.nanmax(scores) > 1.1:
     scores = scores / np.nanpercentile(scores, 80)
 
@@ -223,6 +222,7 @@ for i in range(n_cams):
 
 # cgroup = CameraGroup.load('calibration_bundle.toml').to('cuda:0')
 cgroup = CameraGroup(cams).to('cuda:0')
+cgroup.dump(calib_fname_init)
 
 p2d_cuda = torch.as_tensor(all_p2ds, device='cuda:0')
 scores_cuda = torch.as_tensor(scores, device='cuda:0')

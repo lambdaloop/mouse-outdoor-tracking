@@ -1,0 +1,30 @@
+[workspace]
+name = "outdoor mouse"
+version = "0.1.0"
+description = "environment for processing outdoor mouse data"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.8,<3.12"
+ffmpeg = "*"
+pip = "*"
+ipython = ">=9.10.0,<10"
+libxcb = ">=1.17.0,<2"
+xorg-libxcb = ">=1.12,<2"
+
+[pypi-dependencies]
+torch = { version = "<3", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = "*", index = "https://download.pytorch.org/whl/cu128" }
+torchaudio = { version = "*", index = "https://download.pytorch.org/whl/cu128" }
+vggt = { git = "https://github.com/facebookresearch/vggt.git" }
+# aniposelib = { path = "../aniposelib", editable = true }
+# aniposelib = { git = "https://github.com/lambdaloop/aniposelib.git", branch = "pytorch" }
+aniposelib = { git = "https://github.com/lambdaloop/aniposelib.git", rev = "88d0d39" }
+pandas = "*"
+h5py = ">=3.16.0, <4"
+tables = ">=3.11.1, <4"
+sleap = ">=1.6.2, <2"
+sleap-io = ">=0.6.5, <0.7"
+sleap-nn = ">=0.1.3, <0.2"
+tqdm = "*"
