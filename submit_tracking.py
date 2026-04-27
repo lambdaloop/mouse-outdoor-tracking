@@ -3,8 +3,12 @@
 import argparse
 import os
 import subprocess
+from datetime import datetime
 from glob import glob
 from pathlib import Path
+
+# Global timestamp variable, set once at module level
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def parse_args():
@@ -13,7 +17,7 @@ def parse_args():
     )
     parser.add_argument("--source", required=True, help="Directory with source .avi videos")
     parser.add_argument("--tracked", required=True, help="Directory for output files")
-    parser.add_argument("--arena",   default="right", help="Arena name for tracking configuration")
+    parser.add_argument("--arena", default="right", help="Arena name for tracking configuration")
     return parser.parse_args()
 
 
@@ -42,30 +46,33 @@ def submit_bjob(job_name, command, dependency_ids=None):
     """
     Submit a bsub job with optional dependencies.
     Returns the job ID string.
+    Uses the global timestamp to prefix the job name and to place logs
+    into a subdirectory logs/{timestamp}/.
     """
+    global timestamp
+    os.makedirs(f"logs/{timestamp}", exist_ok=True)
+
+    full_job_name = f"{timestamp}_{job_name}"
     bsub_cmd = [
         "bsub",
-        "-J", job_name,
+        "-J", full_job_name,
         "-n", "8",
         "-q", "gpu_l4",
         "-gpu", "num=1",
         "-W", "12:00",
-        "-o", f"logs/{job_name}.out",
-        "-e", f"logs/{job_name}.err",
+        "-o", f"logs/{timestamp}/{job_name}.out",
+        "-e", f"logs/{timestamp}/{job_name}.err",
     ]
     if dependency_ids:
         dep_expr = " && ".join(f"done({jid})" for jid in dependency_ids)
         bsub_cmd.extend(["-w", dep_expr])
     bsub_cmd.extend(["pixi", "run", "python"] + command)
 
-    # Ensure logs directory exists
-    os.makedirs("logs", exist_ok=True)
-
     print(" ".join(bsub_cmd))
     result = subprocess.run(bsub_cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print("STDERR:", result.stderr)
-        raise RuntimeError(f"bsub submission failed for {job_name}")
+        raise RuntimeError(f"bsub submission failed for {full_job_name}")
     # Parse job ID from output like "Job <123456> is submitted to queue <gpu_l4>."
     output = result.stdout.strip()
     print(output)

@@ -217,6 +217,7 @@ if __name__ == '__main__':
 
         if os.path.exists(outpath):
             continue
+        
         # --- timestamps (same as predict_videos.py) ---
         # fname_csv = fname.replace('video_', 'timestamps_').replace('.avi', '.cvs')
         #
