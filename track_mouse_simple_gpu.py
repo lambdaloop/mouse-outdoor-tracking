@@ -10,13 +10,11 @@ import os
 from glob import glob
 from tqdm import tqdm
 
-def track_video(video_path, cam_id=None, adapt_rate=0.97, threshold=15,
-                min_size=4, max_size=1200, device=None):
+# example bsub
+# bsub -n 8 -q gpu_l4 -gpu "num=1" -W 12:00 pixi run python predict_videos.py 13
 
-    if device is None:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    cam_configs = {
+CAM_CONFIGS = {
+    "right": {
         1:  dict(track_point=[377, 73],  blank_x=range(-4, 5),   blank_y=range(-2, 4),
                  mask_regions=[dict(rows=(0,1))]),
         2:  dict(track_point=[292, 112], blank_x=range(-5, 9),   blank_y=range(-1, 4),
@@ -38,6 +36,16 @@ def track_video(video_path, cam_id=None, adapt_rate=0.97, threshold=15,
         11: dict(track_point=[28,  146], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
         12: dict(track_point=[267, 104], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
     }
+}
+
+
+def track_video(video_path, cam_id=None, arena="right", adapt_rate=0.97, threshold=15,
+                min_size=4, max_size=1200, device=None):
+
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    cam_configs = CAM_CONFIGS.get(arena, CAM_CONFIGS.get("right", {}))
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -175,9 +183,13 @@ def track_video(video_path, cam_id=None, adapt_rate=0.97, threshold=15,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GPU thermal blob tracker')
     parser.add_argument('vidname', help='Camera number string, e.g. "13"')
-    parser.add_argument('--source_path', type=str,
-                        default='/groups/voigts/voigtslab/outdoor/2025_09_25_mouse_new_day3/data')
-    parser.add_argument('--outdir',    type=str,    default='output')
+    parser.add_argument('--source', type=str,
+                        default='/groups/voigts/voigtslab/outdoor/2025_09_25_mouse_new_day3/data',
+                        help='Directory containing source videos')
+    parser.add_argument('--tracked',   type=str,    default='output',
+                        help='Directory for output parquet files')
+    parser.add_argument('--arena',     type=str,    default='right',
+                        help='Arena name to select camera configuration (default: right)')
     parser.add_argument('--cam_id',    type=int,    default=None,
                         help='Override cam_id (default: parsed from filename)')
     parser.add_argument('--adapt',     type=float,  default=0.97)
@@ -188,20 +200,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device(args.device) if args.device else None
-    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(args.tracked, exist_ok=True)
 
-    fnames = sorted(glob(os.path.join(args.source_path,
+    fnames = sorted(glob(os.path.join(args.source,
                                       'video_{}_*.avi'.format(args.vidname))))
     if not fnames:
         raise FileNotFoundError(f"No videos matching video_{args.vidname}_*.avi "
-                                f"in {args.source_path}")
+                                f"in {args.source}")
 
     for ix_fname, fname in enumerate(fnames):
         print("")
         print("{}/{} - {}".format(ix_fname + 1, len(fnames), os.path.basename(fname)))
 
         outname = os.path.basename(fname).replace('.avi', '.pq')
-        outpath = os.path.join(args.outdir, outname)
+        outpath = os.path.join(args.tracked, outname)
 
         if os.path.exists(outpath):
             continue
@@ -212,8 +224,8 @@ if __name__ == '__main__':
         # e.g. video_17_2026-04-13T06_14_42.avi -> timestamps_17_2026-04-13T06_14_*.cv*
         vid_base = os.path.basename(fname)
         prefix = vid_base.replace('video_', 'timestamps_').rsplit('_', 1)[0]  # strip seconds + .avi
-        matches = glob(os.path.join(args.source_path, prefix + '_*.cvs')) + \
-                  glob(os.path.join(args.source_path, prefix + '_*.csv'))
+        matches = glob(os.path.join(args.source, prefix + '_*.cvs')) + \
+                  glob(os.path.join(args.source, prefix + '_*.csv'))
         if not matches:
             print(f"  WARNING: no timestamp file found for {vid_base}, skipping")
             continue
@@ -234,6 +246,7 @@ if __name__ == '__main__':
         df = track_video(
             fname,
             cam_id     = cam_id,
+            arena      = args.arena,
             adapt_rate = args.adapt,
             threshold  = args.threshold,
             min_size   = args.min_size,
