@@ -153,8 +153,8 @@ def main():
     all_p2ds = np.array(all_p2ds)
     scores = np.array(scores)
 
-    if np.nanmax(scores) > 1.1:
-        scores = scores / np.nanpercentile(scores, 80)
+    # if np.nanmax(scores) > 1.1:
+    #     scores = scores / np.nanpercentile(scores, 80)
 
     from aniposelib.utils import select_matrices, mean_transform, mean_transform_robust
 
