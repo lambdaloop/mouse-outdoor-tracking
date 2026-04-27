@@ -26,9 +26,7 @@ import pandas as pd
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Refine the VGGT calibration with bundle adjustment, then triangulate.")
-    parser.add_argument("--root", default="/groups/voigts/voigtslab/outdoor/2026_04_10_mouse_left/data",
-                        help="Directory containing source videos")
-    parser.add_argument("--tracked-root", default="/groups/karashchuk/karashchuklab/outdoor_analysis/2026_04_10_mouse_left",
+    parser.add_argument("--tracked",
                         help="Directory containing tracking parquet files and calibration output")
     return parser.parse_args()
 
@@ -36,9 +34,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    calib_fname_init = os.path.join(args.tracked_root, "calibration_vggt_init.toml")
-    calib_fname_out = os.path.join(args.tracked_root, "calibration_adjusted.toml")
-    points_fname_out = os.path.join(args.tracked_root, "points_3d.npz")
+    calib_fname_init = os.path.join(args.tracked, "calibration_vggt_init.toml")
+    calib_fname_out = os.path.join(args.tracked, "calibration_adjusted.toml")
+    points_fname_out = os.path.join(args.tracked, "points_3d.npz")
 
     if not os.path.exists(calib_fname_init):
         print("Need the following initial calibration file from VGGT:")
@@ -47,7 +45,7 @@ def main():
         return
 
     datas = defaultdict(list)
-    fnames = glob(os.path.join(args.tracked_root, "*.pq"))
+    fnames = glob(os.path.join(args.tracked, "*.pq"))
     print("loading 2d points")
     for fname in tqdm(fnames, ncols=70):
         cname = os.path.basename(fname).split("_")[1]

@@ -26,9 +26,9 @@ import pandas as pd
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Calibrate cameras using VGGT and SLEAP tracking data.")
-    parser.add_argument("--root", default="/groups/voigts/voigtslab/outdoor/2026_04_10_mouse_left/data",
+    parser.add_argument("--source",
                         help="Directory containing source videos")
-    parser.add_argument("--tracked-root", default="/groups/karashchuk/karashchuklab/outdoor_analysis/2026_04_10_mouse_left",
+    parser.add_argument("--tracked",
                         help="Directory containing tracking parquet files and calibration output")
     parser.add_argument("--tempdir", default="tempframes",
                         help="Directory for temporary extracted frames")
@@ -75,16 +75,16 @@ def extract_first_frames(video_paths, output_dir=None):
 def main():
     args = parse_args()
 
-    calib_fname_init = os.path.join(args.tracked_root, "calibration_vggt_init.toml")
-    calib_fname_out = os.path.join(args.tracked_root, "calibration_adjusted.toml")
-    points_fname_out = os.path.join(args.tracked_root, "points_3d.npz")
+    calib_fname_init = os.path.join(args.tracked, "calibration_vggt_init.toml")
+    calib_fname_out = os.path.join(args.tracked, "calibration_adjusted.toml")
+    points_fname_out = os.path.join(args.tracked, "points_3d.npz")
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
 
     model = VGGT.from_pretrained("facebook/VGGT-1B").to(device)
 
-    possible = sorted(glob(os.path.join(args.root, f"{args.camera_prefix}_*.avi")))
+    possible = sorted(glob(os.path.join(args.source, f"{args.camera_prefix}_*.avi")))
     templates = [p.replace(args.camera_prefix, "video_*") for p in possible]
 
     if len(templates) > args.max_templates:
@@ -116,7 +116,7 @@ def main():
     all_intrinsics = torch.stack(all_intrinsics)
 
     datas = defaultdict(list)
-    fnames = glob(os.path.join(args.tracked_root, "*.pq"))
+    fnames = glob(os.path.join(args.tracked, "*.pq"))
     print("loading 2d points")
     for fname in tqdm(fnames, ncols=70):
         cname = os.path.basename(fname).split("_")[1]
