@@ -3,9 +3,9 @@
 This is a pipeline for 3D tracking of mice in an outdoor arena at HHMI Janelia.
 
 The pipeline is as follows:
-1. track_mouse_simple_gpu.py - runs tracking by detecting movement in the thermal camera video
-2. calibrate_videos_vggt.py - uses VGGT network to provide an initial calibration based on video frames
-3. bundle_adjust_triangulate.py - runs bundle adjustment on tracking to refine initial calibration and then triangulates the points
+1. `track_mouse_simple_gpu.py` - runs tracking by detecting movement in the thermal camera video
+2. `calibrate_videos_vggt.py` - uses VGGT network to provide an initial calibration based on video frames
+3. `bundle_adjust_triangulate.py` - runs bundle adjustment on tracking to refine initial calibration and then triangulates the points
 
 Each of these scripts takes --source (video data folder) and --tracked (output folder) arguments. 
 
@@ -17,7 +17,7 @@ This script handles the submission of all 3 steps, adding dependency of step 3 o
 Here's an example submission:
 
 ``` sh
-python submit_tracking.py \
+python3 submit_tracking.py \
   --source /groups/voigts/voigtslab/outdoor/2026_04_10_mouse_right/data \
   --tracked /groups/karashchuk/karashchuklab/outdoor_analysis/2026_04_10_mouse_right \
   --arena right
