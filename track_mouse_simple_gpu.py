@@ -14,7 +14,7 @@ from tqdm import tqdm
 # bsub -n 8 -q gpu_l4 -gpu "num=1" -W 12:00 pixi run python predict_videos.py 13
 
 CAM_CONFIGS = {
-    "right": {
+    "right-2025": {
         1:  dict(track_point=[377, 73],  blank_x=range(-4, 5),   blank_y=range(-2, 4),
                  mask_regions=[dict(rows=(0,1))]),
         2:  dict(track_point=[292, 112], blank_x=range(-5, 9),   blank_y=range(-1, 4),
@@ -25,17 +25,43 @@ CAM_CONFIGS = {
                  mask_regions=[dict(rows=(0,50), cols=(500, None))]),
         6:  dict(track_point=[360, 123], blank_x=range(-8, 4),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0,70),  cols=(310, None)),
-                                dict(rows=(0,120), cols=(450, None))]),
+                               dict(rows=(0,120), cols=(450, None))]),
         7:  dict(track_point=[485, 190], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
         8:  dict(track_point=[307, 127], blank_x=range(-6, 4),   blank_y=range(0,  4)),
         9:  dict(track_point=[580, 41],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0,50), cols=(0,50))]),
         10: dict(track_point=[617, 174], blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0,70), cols=(0,100)),
-                                dict(rows=(0,40), cols=(0,250))]),
+                               dict(rows=(0,40), cols=(0,250))]),
         11: dict(track_point=[28,  146], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
         12: dict(track_point=[267, 104], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
-    }
+    },
+    "right-2026": {
+        1:  dict(track_point=[373, 115], blank_x=range(-4, 5),   blank_y=range(-2, 4),
+                 mask_regions=[dict(rows=(0, 1)),
+                               dict(rows=(0, 50), cols=(400, None)),
+                               dict(rows=(0, 50), cols=(0, 100))]),
+        2:  dict(track_point=[342, 151], blank_x=range(-5, 9),   blank_y=range(-1, 4),
+                 mask_regions=[dict(rows=(0, 10)),
+                               dict(rows=(0, 20), cols=(0, 50))]),
+        3:  dict(track_point=[243, 46],  blank_x=range(-4, 14),  blank_y=range(-5, 6)),
+        4:  dict(track_point=[143, 198], blank_x=range(-8, 6),   blank_y=range(-4, 4)),
+        5:  dict(track_point=[313, 119], blank_x=range(-5, 6),   blank_y=range(-2, 3),
+                 mask_regions=[dict(rows=(0, 50), cols=(500, None))]),
+        6:  dict(track_point=[360, 100], blank_x=range(-8, 4),   blank_y=range(-2, 3),
+                 mask_regions=[dict(rows=(0, 70),  cols=(310, None)),
+                               dict(rows=(0, 120), cols=(450, None))]),
+        7:  dict(track_point=[534, 191], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
+        8:  dict(track_point=[260, 144], blank_x=range(-5, 7),   blank_y=range(-2, 3),
+                 mask_regions=[dict(rows=(0, 50), cols=(400, None))]),
+        9:  dict(track_point=[60, 440],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
+                 mask_regions=[dict(rows=(0, 50), cols=(0, 50))]),
+        10: dict(track_point=[163, 118], blank_x=range(-14, 7),  blank_y=range(-4, 6),
+                 mask_regions=[dict(rows=(0, 60), cols=(0, 100)),
+                               dict(rows=(0, 20), cols=(0, 250))]),
+        11: dict(track_point=[25, 139],  blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+        12: dict(track_point=[264, 102], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+    },
 }
 
 
