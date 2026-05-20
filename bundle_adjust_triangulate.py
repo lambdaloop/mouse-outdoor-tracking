@@ -92,7 +92,7 @@ def main():
     # scores_cuda = torch.as_tensor(scores, device="cuda:0")
     # p2d_cuda[scores_cuda < 0.95] = torch.nan
 
-    count = np.sum(np.isfinite(all_p2ds[:, :, 0]), axis=0)
+    count = np.sum(np.all(np.isfinite(all_p2ds), axis=-1), axis=0)
     p2d_sub = all_p2ds[:, count >= 2].copy()
     scores_sub = scores[:, count >= 2]
     p2d_sub[scores_sub < 0.90] = np.nan
