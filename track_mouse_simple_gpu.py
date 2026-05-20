@@ -15,52 +15,52 @@ from tqdm import tqdm
 
 CAM_CONFIGS = {
     "right-2025": {
-        1:  dict(track_point=[377, 73],  blank_x=range(-4, 5),   blank_y=range(-2, 4),
+        1:  dict(track_point=[376, 72],  blank_x=range(-4, 5),   blank_y=range(-2, 4),
                  mask_regions=[dict(rows=(0,1))]),
-        2:  dict(track_point=[292, 112], blank_x=range(-5, 9),   blank_y=range(-1, 4),
+        2:  dict(track_point=[291, 111], blank_x=range(-5, 9),   blank_y=range(-1, 4),
                  mask_regions=[dict(rows=(0,10)), dict(rows=(0,20), cols=(0,50))]),
-        3:  dict(track_point=[231, 82],  blank_x=range(-4, 14),  blank_y=range(-5, 6)),
-        4:  dict(track_point=[181, 206], blank_x=range(-8, 6),   blank_y=range(-4, 4)),
-        5:  dict(track_point=[313, 119], blank_x=range(-5, 6),   blank_y=range(-2, 3),
+        3:  dict(track_point=[230, 81],  blank_x=range(-4, 14),  blank_y=range(-5, 6)),
+        4:  dict(track_point=[180, 205], blank_x=range(-8, 6),   blank_y=range(-4, 4)),
+        5:  dict(track_point=[312, 118], blank_x=range(-5, 6),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0,50), cols=(500, None))]),
-        6:  dict(track_point=[360, 123], blank_x=range(-8, 4),   blank_y=range(-2, 3),
+        6:  dict(track_point=[359, 122], blank_x=range(-8, 4),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0,70),  cols=(310, None)),
                                dict(rows=(0,120), cols=(450, None))]),
-        7:  dict(track_point=[485, 190], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
-        8:  dict(track_point=[307, 127], blank_x=range(-6, 4),   blank_y=range(0,  4)),
-        9:  dict(track_point=[580, 41],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
+        7:  dict(track_point=[484, 189], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
+        8:  dict(track_point=[306, 126], blank_x=range(-6, 4),   blank_y=range(0,  4)),
+        9:  dict(track_point=[579, 40],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0,50), cols=(0,50))]),
-        10: dict(track_point=[617, 174], blank_x=range(-14, 7),  blank_y=range(-4, 6),
+        10: dict(track_point=[616, 173], blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0,70), cols=(0,100)),
                                dict(rows=(0,40), cols=(0,250))]),
-        11: dict(track_point=[28,  146], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
-        12: dict(track_point=[267, 104], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+        11: dict(track_point=[27,  145], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+        12: dict(track_point=[266, 103], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
     },
     "right-2026": {
-        1:  dict(track_point=[373, 115], blank_x=range(-4, 5),   blank_y=range(-2, 4),
+        1:  dict(track_point=[372, 114], blank_x=range(-4, 5),   blank_y=range(-2, 4),
                  mask_regions=[dict(rows=(0, 1)),
                                dict(rows=(0, 50), cols=(400, None)),
                                dict(rows=(0, 50), cols=(0, 100))]),
-        2:  dict(track_point=[342, 151], blank_x=range(-5, 9),   blank_y=range(-1, 4),
+        2:  dict(track_point=[341, 150], blank_x=range(-5, 9),   blank_y=range(-1, 4),
                  mask_regions=[dict(rows=(0, 10)),
                                dict(rows=(0, 20), cols=(0, 50))]),
-        3:  dict(track_point=[243, 46],  blank_x=range(-4, 14),  blank_y=range(-5, 6)),
-        4:  dict(track_point=[143, 198], blank_x=range(-8, 6),   blank_y=range(-4, 4)),
-        5:  dict(track_point=[313, 119], blank_x=range(-5, 6),   blank_y=range(-2, 3),
+        3:  dict(track_point=[242, 45],  blank_x=range(-4, 14),  blank_y=range(-5, 6)),
+        4:  dict(track_point=[142, 197], blank_x=range(-8, 6),   blank_y=range(-4, 4)),
+        5:  dict(track_point=[312, 118], blank_x=range(-5, 6),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0, 50), cols=(500, None))]),
-        6:  dict(track_point=[360, 100], blank_x=range(-8, 4),   blank_y=range(-2, 3),
+        6:  dict(track_point=[359, 99],  blank_x=range(-8, 4),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0, 70),  cols=(310, None)),
                                dict(rows=(0, 120), cols=(450, None))]),
-        7:  dict(track_point=[534, 191], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
-        8:  dict(track_point=[260, 144], blank_x=range(-5, 7),   blank_y=range(-2, 3),
+        7:  dict(track_point=[533, 190], blank_x=range(-8, 4),   blank_y=range(-2, 3)),
+        8:  dict(track_point=[259, 143], blank_x=range(-5, 7),   blank_y=range(-2, 3),
                  mask_regions=[dict(rows=(0, 50), cols=(400, None))]),
-        9:  dict(track_point=[60, 440],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
+        9:  dict(track_point=[59, 439],  blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0, 50), cols=(0, 50))]),
-        10: dict(track_point=[163, 118], blank_x=range(-14, 7),  blank_y=range(-4, 6),
+        10: dict(track_point=[162, 117], blank_x=range(-14, 7),  blank_y=range(-4, 6),
                  mask_regions=[dict(rows=(0, 60), cols=(0, 100)),
                                dict(rows=(0, 20), cols=(0, 250))]),
-        11: dict(track_point=[25, 139],  blank_x=range(-14, 7),  blank_y=range(-4, 6)),
-        12: dict(track_point=[264, 102], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+        11: dict(track_point=[24, 138],  blank_x=range(-14, 7),  blank_y=range(-4, 6)),
+        12: dict(track_point=[263, 101], blank_x=range(-14, 7),  blank_y=range(-4, 6)),
     },
 }
 
@@ -71,7 +71,7 @@ def track_video(video_path, cam_id=None, arena="right", adapt_rate=0.97, thresho
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    cam_configs = CAM_CONFIGS.get(arena, CAM_CONFIGS.get("right", {}))
+    cam_configs = CAM_CONFIGS.get(arena, {})
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -128,7 +128,7 @@ def track_video(video_path, cam_id=None, arena="right", adapt_rate=0.97, thresho
                 break
 
             vid_frame = torch.from_numpy(
-                frame[:, :, 0].astype(np.float32)
+                frame[:, :, 2].astype(np.float32)
             ).to(device)
             vid_frame = vid_frame * spatial_mask
 
@@ -170,20 +170,16 @@ def track_video(video_path, cam_id=None, arena="right", adapt_rate=0.97, thresho
                         centroids_np[1:].astype(np.float32)
                     ).to(device)
 
-                    size_ok  = (areas >= min_size) & (areas < max_size)
-                    dists    = torch.linalg.norm(centroids - kal_xy.unsqueeze(0), dim=1)
-                    dist_ok  = dists < kal_radius
-                    valid    = size_ok & dist_ok
-
-                    if valid.any():
-                        valid_areas     = areas[valid]
-                        valid_centroids = centroids[valid]
-                        best_idx        = torch.argmax(valid_areas)
-                        best_cx         = valid_centroids[best_idx, 0].item()
-                        best_cy         = valid_centroids[best_idx, 1].item()
-                        best_area       = valid_areas[best_idx].item()
-                        kal_xy          = valid_centroids[best_idx]
-                        kal_radius      = torch.tensor(30.0, device=device)
+                    size_ok = (areas >= min_size) & (areas < max_size)
+                    if size_ok.any():
+                        biggest_idx = torch.argmax(areas)
+                        dist = torch.linalg.norm(centroids[biggest_idx] - kal_xy)
+                        if dist < kal_radius:
+                            best_cx    = centroids[biggest_idx, 0].item()
+                            best_cy    = centroids[biggest_idx, 1].item()
+                            best_area  = areas[biggest_idx].item()
+                            kal_xy     = centroids[biggest_idx]
+                            kal_radius = torch.tensor(30.0, device=device)
 
             frame_indices.append(frame_idx)
             xs.append(best_cx)
@@ -214,8 +210,8 @@ if __name__ == '__main__':
                         help='Directory containing source videos')
     parser.add_argument('--tracked',   type=str,    default='output',
                         help='Directory for output parquet files')
-    parser.add_argument('--arena',     type=str,    default='right',
-                        help='Arena name to select camera configuration (default: right)')
+    parser.add_argument('--arena',     type=str,    default='right-2026',
+                        help='Arena name to select camera configuration (default: right-2026)')
     parser.add_argument('--cam_id',    type=int,    default=None,
                         help='Override cam_id (default: parsed from filename)')
     parser.add_argument('--adapt',     type=float,  default=0.97)

@@ -17,7 +17,7 @@ def parse_args():
     )
     parser.add_argument("--source", required=True, help="Directory with source .avi videos")
     parser.add_argument("--tracked", required=True, help="Directory for output files")
-    parser.add_argument("--arena", default="right", help="Arena name for tracking configuration")
+    parser.add_argument("--arena", default="right-2026", help="Arena name for tracking configuration")
     return parser.parse_args()
 
 
