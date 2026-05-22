@@ -95,7 +95,7 @@ def main():
     count = np.sum(np.all(np.isfinite(all_p2ds), axis=-1), axis=0)
     p2d_sub = all_p2ds[:, count >= 2].copy()
     scores_sub = scores[:, count >= 2]
-    p2d_sub[scores_sub < 0.90] = np.nan
+    # p2d_sub[scores_sub < 0.90] = np.nan
 
     print(p2d_sub.shape)
 
@@ -111,7 +111,7 @@ def main():
     # p2d_tri[scores < 0.90] = torch.nan
 
     with torch.no_grad():
-        p3d = cgroup.triangulate(p2d_sub, progress=True)
+        p3d = cgroup.triangulate_ransac(p2d_sub, progress=True)
 
     p3d_numpy = p3d.detach().cpu().numpy()
     err = cgroup.reprojection_error(p3d, p2d_sub, mean=True).detach().cpu().numpy()
