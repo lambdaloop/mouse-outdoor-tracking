@@ -111,7 +111,7 @@ def main():
     # p2d_tri[scores < 0.90] = torch.nan
 
     with torch.no_grad():
-        p3d = cgroup.triangulate_ransac(p2d_sub, progress=True)
+        p3d, _, _, _ = cgroup.triangulate_ransac(p2d_sub, progress=True)
 
     p3d_numpy = p3d.detach().cpu().numpy()
     err = cgroup.reprojection_error(p3d, p2d_sub, mean=True).detach().cpu().numpy()
