@@ -50,6 +50,21 @@ def main():
     for fname in tqdm(fnames, ncols=70):
         cname = os.path.basename(fname).split("_")[1]
         df = pd.read_parquet(fname)
+        # Normalize legacy datetime columns and string timestamps to one timezone.
+        # errors='coerce' safely identifies malformed rows from truncated timestamp files.
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"], errors="coerce", utc=True
+        )
+        bad_timestamps = df["timestamp"].isna()
+        if bad_timestamps.any():
+            print(
+                f"WARNING: dropping {int(bad_timestamps.sum())} rows with invalid "
+                f"timestamps from {fname}"
+            )
+            df = df.loc[~bad_timestamps].copy()
+        if df.empty:
+            print(f"WARNING: skipping {fname}; no valid timestamps")
+            continue
         df["video"] = fname.replace(".pq", "")
         df["cam"] = cname
         df["framenum"] = np.arange(len(df))

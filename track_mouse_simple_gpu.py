@@ -254,9 +254,22 @@ if __name__ == '__main__':
             continue
         fname_csv = matches[0]
         
-        tstamps = pd.read_csv(fname_csv, header=None, names=['timestamp'],
-                              parse_dates=[0])
+        tstamps = pd.read_csv(
+            fname_csv, header=None, names=['timestamp'], dtype={'timestamp': 'string'}
+        )
+        # Preserve source frame indices before coercing timestamps: malformed tail rows
+        # should be skipped without shifting the video/frame alignment.
         tstamps['frame'] = np.arange(len(tstamps))
+        tstamps['timestamp'] = pd.to_datetime(
+            tstamps['timestamp'], errors='coerce', utc=True
+        )
+        bad_timestamps = tstamps['timestamp'].isna()
+        if bad_timestamps.any():
+            print(
+                f"  WARNING: dropping {int(bad_timestamps.sum())} malformed "
+                f"timestamps from {fname_csv}"
+            )
+            tstamps = tstamps.loc[~bad_timestamps].copy()
 
         # --- cam_id: parse from filename if not overridden ---
         if args.cam_id is not None:

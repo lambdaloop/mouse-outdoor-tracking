@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 from tqdm import tqdm
-from collections import defaultdict
+from collections import Counter, defaultdict
 import pandas as pd
 
 
@@ -89,27 +89,55 @@ def main():
     model = VGGT.from_pretrained("facebook/VGGT-1B").to(device)
 
     possible = sorted(glob(os.path.join(args.source, f"{args.camera_prefix}_*.avi")))
-    templates = [p.replace(args.camera_prefix, "video_*") for p in possible]
+    if not possible:
+        raise FileNotFoundError(
+            f"No videos matching '{args.camera_prefix}_*.avi' found in {args.source}"
+        )
 
+    template_camera_sets = []
+    for path in possible:
+        template = path.replace(args.camera_prefix, "video_*")
+        vidnames = sorted(glob(template))
+        camera_names = tuple(Path(v).name.split("_")[1] for v in vidnames)
+        if camera_names:
+            template_camera_sets.append((template, camera_names))
+
+    # Sample only synchronized timestamps containing the same complete camera set.
+    camera_set_counts = Counter(cameras for _, cameras in template_camera_sets)
+    cam_names = max(
+        camera_set_counts,
+        key=lambda cameras: (len(cameras), camera_set_counts[cameras], cameras),
+    )
+    templates = [
+        template for template, cameras in template_camera_sets if cameras == cam_names
+    ]
+    if args.max_templates < 2:
+        raise ValueError("--max-templates must be at least 2 for camera pose selection")
+    if len(templates) < 2:
+        raise ValueError(
+            "VGGT calibration requires at least two timestamps containing the same "
+            f"complete camera set; found {len(templates)} for cameras {cam_names}"
+        )
     if len(templates) > args.max_templates:
         templates = random.sample(templates, args.max_templates)
 
-    n_cams = max([len(glob(template)) for template in templates])
-    print("detected cams:", n_cams)
-    
+    n_cams = len(cam_names)
+    print(f"detected cams: {n_cams}; using {len(templates)} complete timestamps")
+
     all_extrinsics = []
     all_intrinsics = []
     for template in templates:
         print(template)
 
         vidnames = sorted(glob(template))
-        print(len(vidnames))
-        if len(vidnames) < n_cams:
-            continue
-
-        cam_names = [v.split('_')[1] for v in vidnames]
+        current_cameras = tuple(Path(v).name.split("_")[1] for v in vidnames)
+        if current_cameras != cam_names:
+            raise RuntimeError(f"Camera set changed while processing {template}")
 
         frames = extract_first_frames(vidnames, output_dir=args.tempdir)
+        if any(frame is None for frame in frames):
+            print(f"  Skipping {template}: failed to extract at least one camera frame")
+            continue
 
         images = load_and_preprocess_images(frames).to(device)
 
@@ -122,6 +150,12 @@ def main():
             extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, [512, 640])
             all_extrinsics.append(extrinsic[0])
             all_intrinsics.append(intrinsic[0])
+
+    if len(all_extrinsics) < 2:
+        raise RuntimeError(
+            "VGGT calibration needs at least two successfully processed complete "
+            f"timestamps; only {len(all_extrinsics)} were usable"
+        )
 
     all_extrinsics = torch.stack(all_extrinsics)
     all_intrinsics = torch.stack(all_intrinsics)
