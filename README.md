@@ -5,7 +5,7 @@ This is a pipeline for 3D tracking of mice in an outdoor arena at HHMI Janelia.
 The pipeline is as follows:
 1. `track_mouse_simple_gpu.py` - runs tracking by detecting movement in the thermal camera video
 2. `calibrate_videos_vggt.py` - uses VGGT network to provide an initial calibration based on video frames
-3. `bundle_adjust_triangulate.py` - runs bundle adjustment on tracking to refine initial calibration and then triangulates the points
+3. `robust_triangulation.py` - filters detections, refines the initial calibration with robust bundle adjustment, then robustly triangulates the points (ignoring cameras whose detections disagree). Writes `calibration_adjusted.toml` and `points_3d.npz`. (Replaces the older `bundle_adjust_triangulate.py`.)
 
 Each of these scripts takes --source (video data folder) and --tracked (output folder) arguments. 
 

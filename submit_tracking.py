@@ -13,7 +13,7 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Submit bsub jobs for tracking, calibration, and bundle adjustment."
+        description="Submit bsub jobs for tracking, calibration, and robust triangulation."
     )
     parser.add_argument("--source", required=True, help="Directory with source .avi videos")
     parser.add_argument("--tracked", required=True, help="Directory for output files")
@@ -121,19 +121,20 @@ def main():
     ]
     calib_job_id = submit_bjob("calibrate_vggt", calib_command)
 
-    # Submit bundle adjustment job (dependent on all tracking + calibration)
+    # Submit robust calibration + triangulation job (dependent on all tracking + calibration)
     # Use default dependency expression
     all_deps = tracking_job_ids + [calib_job_id]
-    bundle_command = [
-        "bundle_adjust_triangulate.py",
+    triangulate_command = [
+        "robust_triangulation.py",
         "--tracked", tracked_dir,
+        "--arena", args.arena,
     ]
-    bundle_job_id = submit_bjob("bundle_adjust", bundle_command, dependency_ids=all_deps)
+    triangulate_job_id = submit_bjob("robust_triangulation", triangulate_command, dependency_ids=all_deps)
 
     print("\nSubmitted jobs:")
     print(f"  Tracking jobs: {', '.join(tracking_job_ids)}")
     print(f"  Calibration job: {calib_job_id}")
-    print(f"  Bundle adjustment job: {bundle_job_id} (depends on all above)")
+    print(f"  Robust triangulation job: {triangulate_job_id} (depends on all above)")
 
 
 if __name__ == "__main__":
