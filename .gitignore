@@ -8,3 +8,11 @@ tmp/
 build
 
 .aider*
+dev/
+
+# generated outputs / local data
+logs/
+tempframes/
+rendered_plots/
+*.avi
+__pycache__/
