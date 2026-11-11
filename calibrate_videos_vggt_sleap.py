@@ -9,13 +9,9 @@ import os
 import random
 
 import torch
-from vggt.models.vggt import VGGT
-from vggt.utils.load_fn import load_and_preprocess_images
 
-from vggt.utils.pose_enc import pose_encoding_to_extri_intri
-
-from aniposelib.cameras import CameraGroup, Camera
-import cv2
+from aniposelib import CameraGroup
+from aniposelib.init import vggt
 
 import numpy as np
 
@@ -79,19 +75,13 @@ def main():
     calib_fname_out = os.path.join(args.tracked, "calibration_adjusted.toml")
     points_fname_out = os.path.join(args.tracked, "points_3d.npz")
 
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-
-    model = VGGT.from_pretrained("facebook/VGGT-1B").to(device)
-
     possible = sorted(glob(os.path.join(args.source, f"{args.camera_prefix}_*.avi")))
     templates = [p.replace(args.camera_prefix, "video_*") for p in possible]
 
     if len(templates) > args.max_templates:
         templates = random.sample(templates, args.max_templates)
 
-    all_extrinsics = []
-    all_intrinsics = []
+    frame_sets = []
     for template in templates:
         print(template)
 
@@ -99,21 +89,7 @@ def main():
         print(len(vidnames))
 
         frames = extract_first_frames(vidnames, output_dir=args.tempdir)
-
-        images = load_and_preprocess_images(frames).to(device)
-
-        with torch.no_grad():
-            with torch.amp.autocast("cuda", dtype=dtype):
-                images = images[None]
-                aggregated_tokens_list, ps_idx = model.aggregator(images)
-
-            pose_enc = model.camera_head(aggregated_tokens_list)[-1]
-            extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, [512, 640])
-            all_extrinsics.append(extrinsic[0])
-            all_intrinsics.append(intrinsic[0])
-
-    all_extrinsics = torch.stack(all_extrinsics)
-    all_intrinsics = torch.stack(all_intrinsics)
+        frame_sets.append(frames)
 
     datas = defaultdict(list)
     fnames = glob(os.path.join(args.tracked, "*.pq"))
@@ -156,15 +132,10 @@ def main():
     # if np.nanmax(scores) > 1.1:
     #     scores = scores / np.nanpercentile(scores, 80)
 
-    from aniposelib.utils import select_matrices, mean_transform, mean_transform_robust
-
-    n_cams = len(cam_names)
-
-    def get_rtvec(M):
-        rvec = torch.tensor(cv2.Rodrigues(M[:3, :3].detach().cpu().numpy())[0],
-                            dtype=M.dtype, device=M.device).ravel()
-        tvec = M[:3, 3].ravel()
-        return rvec, tvec
+    # VGGT inference (mode="crop" = vggt's own preprocessing), Sim(3)-aligned robust average
+    # over the templates; the intrinsics are the lab's calibration of the thermal cameras.
+    pred = vggt.predict(frame_sets, names=cam_names, mode="crop")
+    agg = vggt.aggregate(pred)
 
     K = np.array([
         [527.2260, 0, 316.4491],
@@ -173,53 +144,40 @@ def main():
     ])
     dist = np.array([-0.3437, 0.1788, 0, 0, -0.0527])
 
-    cams = []
-    for i in range(n_cams):
-        L = all_extrinsics[:, i].detach().cpu().numpy()
-        L_best = select_matrices(L)
-        M_mean = mean_transform(L_best)
-        M_mean = mean_transform_robust(L, M_mean, error=0.5)
-        rvec, tvec = get_rtvec(torch.as_tensor(M_mean))
-
-        cam = Camera(matrix=K, rvec=rvec, tvec=tvec, size=[640, 512], dist=dist,
-                     name=cam_names[i])
-        cams.append(cam)
-
-    cgroup = CameraGroup(cams).to("cuda:0")
+    cgroup = vggt.to_cameragroup(agg, K=K, dist=dist, sizes=[640, 512])
     cgroup.dump(calib_fname_init)
+    cgroup = cgroup.to("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    p2d_cuda = torch.as_tensor(all_p2ds, device="cuda:0")
-    scores_cuda = torch.as_tensor(scores, device="cuda:0")
-    p2d_cuda[scores_cuda < 0.95] = torch.nan
+    # numpy in -> numpy out
+    p2d = all_p2ds.copy()
+    p2d[scores < 0.95] = np.nan
 
-    count = torch.sum(torch.isfinite(p2d_cuda[:, :, 0]), axis=0)
-    p2d_sub = p2d_cuda[:, count >= 2]
+    count = np.sum(np.isfinite(p2d[:, :, 0]), axis=0)
+    p2d_sub = p2d[:, count >= 2]
 
     print(p2d_sub.shape)
 
     err = cgroup.average_error(p2d_sub[:, :500])
-    print(err.item())
+    print(float(err))
 
-    cgroup.bundle_adjust_iter(p2d_sub, verbose=True, only_extrinsics=True,
-                              n_samp_iter=500, n_iters=10, n_samp_full=1000)
+    # aniposelib >= 1.0: LM robust bundle adjustment (the Adam options n_samp_iter / n_samp_full
+    # are gone; method="adam" restores the 0.9 code path)
+    cgroup.bundle_adjust_iter(p2d_sub, verbose=True, only_extrinsics=True, n_iters=10)
 
     cgroup.dump(calib_fname_out)
 
-    p2d_tri = torch.as_tensor(all_p2ds, device="cuda:0")
-    p2d_tri[scores_cuda < 0.90] = torch.nan
+    p2d_tri = all_p2ds.copy()
+    p2d_tri[scores < 0.90] = np.nan
 
-    with torch.no_grad():
-        p3d = cgroup.triangulate(p2d_tri, progress=True)
-
-    p3d_numpy = p3d.detach().cpu().numpy()
-    err = cgroup.reprojection_error(p3d, p2d_cuda, mean=True).detach().cpu().numpy()
+    p3d = cgroup.triangulate(p2d_tri, progress=True)
+    err = cgroup.reprojection_error(p3d, p2d, mean=True)
 
     start_time = str(stamps["timestamp"][0])
     time_offset = (stamps["timestamp"] - stamps["timestamp"][0]) / pd.Timedelta(seconds=1.0)
 
-    np.savez_compressed(points_fname_out, p3d=p3d_numpy, err=err,
+    np.savez_compressed(points_fname_out, p3d=p3d, err=err,
                         p2d=all_p2ds, scores=scores, start_time=start_time,
-                        time_offset=time_offset, count=count.detach().cpu().numpy())
+                        time_offset=time_offset, count=count)
 
 
 if __name__ == "__main__":

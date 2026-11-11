@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import subprocess
-import tempfile
-from pathlib import Path
 from glob import glob
 import os
-import random
 
 import torch
-from vggt.models.vggt import VGGT
-from vggt.utils.load_fn import load_and_preprocess_images
 
-from vggt.utils.pose_enc import pose_encoding_to_extri_intri
-
-from aniposelib.cameras import CameraGroup, Camera
-import cv2
+from aniposelib import CameraGroup
 
 import numpy as np
 
@@ -70,7 +61,8 @@ def main():
         df["framenum"] = np.arange(len(df))
         datas[cname].append(df)
 
-    cam_names = sorted(list(datas.keys()))
+    # numeric camera order, matching CameraGroup.load (cam_2 before cam_10)
+    cam_names = sorted(datas.keys(), key=lambda s: (len(s), s))
 
     datas_combined = {k: pd.concat(v, ignore_index=True) for k, v in datas.items()}
 
@@ -101,7 +93,7 @@ def main():
     # if np.nanmax(scores) > 1.1:
     #     scores = scores / np.nanpercentile(scores, 80)
 
-    cgroup = CameraGroup.load(calib_fname_init).to("cuda:0")
+    cgroup = CameraGroup.load(calib_fname_init).to("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # p2d_cuda = torch.as_tensor(all_p2ds, device="cuda:0")
     # scores_cuda = torch.as_tensor(scores, device="cuda:0")
@@ -117,8 +109,9 @@ def main():
     err = cgroup.average_error(p2d_sub[:, :500])
     print(err.item())
 
-    cgroup.bundle_adjust_iter(p2d_sub, verbose=True, only_extrinsics=True,
-                              n_samp_iter=400, n_iters=16, n_samp_full=1000)
+    # aniposelib >= 1.0: Levenberg-Marquardt robust bundle adjustment by default (the old
+    # Adam options n_samp_iter / n_samp_full are gone; method="adam" restores the 0.9 code path)
+    cgroup.bundle_adjust_iter(p2d_sub, verbose=True, only_extrinsics=True, n_iters=16)
 
     cgroup.dump(calib_fname_out)
 
@@ -129,11 +122,11 @@ def main():
         # p3d, _, _, _ = cgroup.triangulate_ransac(p2d_sub, progress=True)
         p3d = cgroup.triangulate(p2d_sub, progress=True)
 
-    p3d_numpy = p3d.detach().cpu().numpy()
-    err = cgroup.reprojection_error(p3d, p2d_sub, mean=True).detach().cpu().numpy()
+    # numpy in -> numpy out
+    err = cgroup.reprojection_error(p3d, p2d_sub, mean=True)
 
     p3d_out = np.full((all_p2ds.shape[1], 3), np.nan)
-    p3d_out[count >= 2] = p3d_numpy
+    p3d_out[count >= 2] = p3d
 
     err_out = np.full((all_p2ds.shape[1],), np.nan)
     err_out[count >= 2] = err

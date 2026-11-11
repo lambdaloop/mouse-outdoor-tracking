@@ -7,22 +7,19 @@ from pathlib import Path
 from glob import glob
 import os
 import random
-
-import torch
-from vggt.models.vggt import VGGT
-from vggt.utils.load_fn import load_and_preprocess_images
-
-from vggt.utils.pose_enc import pose_encoding_to_extri_intri
-
-from aniposelib.cameras import CameraGroup, Camera
-from aniposelib.utils import select_matrices, mean_transform, mean_transform_robust
-import cv2
+from collections import Counter
 
 import numpy as np
 
-from tqdm import tqdm
-from collections import Counter, defaultdict
-import pandas as pd
+from aniposelib.init import vggt
+
+# Lab calibration of the thermal cameras (intrinsics are not estimated by VGGT here)
+K = np.array([
+    [527.2260, 0, 316.4491],
+    [0, 525.9586, 252.6574],
+    [0, 0, 1],
+])
+dist = np.array([-0.3437, 0.1788, 0, 0, -0.0527])
 
 
 def parse_args():
@@ -83,11 +80,6 @@ def main():
         print("output file exists, exiting...")
         return
         
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-
-    model = VGGT.from_pretrained("facebook/VGGT-1B").to(device)
-
     possible = sorted(glob(os.path.join(args.source, f"{args.camera_prefix}_*.avi")))
     if not possible:
         raise FileNotFoundError(
@@ -124,8 +116,7 @@ def main():
     n_cams = len(cam_names)
     print(f"detected cams: {n_cams}; using {len(templates)} complete timestamps")
 
-    all_extrinsics = []
-    all_intrinsics = []
+    frame_sets = []
     for template in templates:
         print(template)
 
@@ -138,56 +129,25 @@ def main():
         if any(frame is None for frame in frames):
             print(f"  Skipping {template}: failed to extract at least one camera frame")
             continue
+        frame_sets.append(frames)
 
-        images = load_and_preprocess_images(frames).to(device)
-
-        with torch.no_grad():
-            with torch.amp.autocast("cuda", dtype=dtype):
-                images = images[None]
-                aggregated_tokens_list, ps_idx = model.aggregator(images)
-
-            pose_enc = model.camera_head(aggregated_tokens_list)[-1]
-            extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, [512, 640])
-            all_extrinsics.append(extrinsic[0])
-            all_intrinsics.append(intrinsic[0])
-
-    if len(all_extrinsics) < 2:
+    if len(frame_sets) < 2:
         raise RuntimeError(
             "VGGT calibration needs at least two successfully processed complete "
-            f"timestamps; only {len(all_extrinsics)} were usable"
+            f"timestamps; only {len(frame_sets)} were usable"
         )
 
-    all_extrinsics = torch.stack(all_extrinsics)
-    all_intrinsics = torch.stack(all_intrinsics)
+    # VGGT inference (mode="crop" is the network input of vggt's load_and_preprocess_images),
+    # then Sim(3) alignment of the per-template rigs and robust averaging.
+    pred = vggt.predict(frame_sets, names=cam_names, mode="crop")
+    agg = vggt.aggregate(pred)
+    print("VGGT template spread: raw rig scale rel. spread "
+          f"{agg.raw_scale_rel_spread:.3f}, median rotation dispersion "
+          f"{np.median(agg.stats['rot_disp_deg']):.2f} deg")
 
-    n_cams = len(cam_names)
-
-    def get_rtvec(M):
-        rvec = torch.tensor(cv2.Rodrigues(M[:3, :3].detach().cpu().numpy())[0],
-                            dtype=M.dtype, device=M.device).ravel()
-        tvec = M[:3, 3].ravel()
-        return rvec, tvec
-
-    K = np.array([
-        [527.2260, 0, 316.4491],
-        [0, 525.9586, 252.6574],
-        [0, 0, 1],
-    ])
-    dist = np.array([-0.3437, 0.1788, 0, 0, -0.0527])
-
-    cams = []
-    for i in range(n_cams):
-        L = all_extrinsics[:, i].detach().cpu().numpy()
-        L_best = select_matrices(L)
-        M_mean = mean_transform(L_best)
-        M_mean = mean_transform_robust(L, M_mean, error=0.5)
-        rvec, tvec = get_rtvec(torch.as_tensor(M_mean))
-
-        cam = Camera(matrix=K, rvec=rvec, tvec=tvec, size=[640, 512], dist=dist,
-                     name=cam_names[i])
-        cams.append(cam)
-
-    cgroup = CameraGroup(cams).to("cuda:0")
+    # VGGT only provides the extrinsics here (an init for bundle adjustment); the intrinsics
+    # are the lab's calibration of the thermal cameras.
+    cgroup = vggt.to_cameragroup(agg, K=K, dist=dist, sizes=[640, 512])
     cgroup.dump(calib_fname_init)
 
 
